@@ -7,7 +7,7 @@ import math
 from scipy.sparse import issparse
 
 def read_data():
-    data = pd.read_csv(r'C:\Users\rasim\Downloads\archive\spotify_songs.csv')
+    data = pd.read_csv('./spotify_songs.csv')
     if 'track_popularity' not in data.columns:
         print("Column 'track_popularity' does not exist in the dataset.")
         exit(1)
@@ -125,7 +125,7 @@ def main():
     # Evaluate predictions...
     # (Add code here to evaluate the model using metrics like accuracy, precision, recall, etc.)
     # ...
-    
+
 
 if __name__ == '__main__':
     main()
