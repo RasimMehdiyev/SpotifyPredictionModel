@@ -76,3 +76,6 @@ def plot_predictions(X, y, predictions):
     plt.show()
 
 
+    # ADD A HEATMAP USING PANDAS OR SEABORN
+    # BOX PLOT FOR VISUALISING THE DATA OR VIOLIN PLOT 
+
