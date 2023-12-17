@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 
 def load_data():
     data = pd.read_csv('./spotify_songs.csv')
-    data = data[:15000]
+    data = data[:6000]
     return data
 
 def separate_data(data):
@@ -59,7 +59,7 @@ def compute_class_weights(y):
     return dict(zip(classes, class_weights))
 
 
-def gradient_dw(X, y, w, b, class_weights):
+def gradient_dw(X, y, w, b, class_weights, alpha):
     N = len(X)
     weighted_sum = np.zeros(w.shape)
 
@@ -69,8 +69,9 @@ def gradient_dw(X, y, w, b, class_weights):
         weight = class_weights[yi]
         weighted_sum += weight * xi.T * (sigmoid(xi @ w + b) - yi)
 
-    dw = weighted_sum / N
+    dw = weighted_sum / N + alpha * w  # Adding regularization term
     return dw
+
 
 def gradient_db(X, y, w, b, class_weights):
     N = len(X)
@@ -90,22 +91,29 @@ def train(X_train, y_train, X_test, y_test, epochs, alpha, eta0):
     class_weights = compute_class_weights(y_train)
 
     for epoch in range(epochs):
-        dw = gradient_dw(X_train, y_train, w, b, class_weights)
+        # Adjust the gradient calculation to include class weights and regularization
+        dw = gradient_dw(X_train, y_train, w, b, class_weights, alpha)
         db = gradient_db(X_train, y_train, w, b, class_weights)
 
+        # Update weights and bias
         w -= eta0 * dw
         b -= eta0 * db
 
-        # Optional: Print the training progress
         if epoch % 100 == 0:
-            print(f"Epoch {epoch}/{epochs}")
+            # Print loss for monitoring
+            train_loss = logloss(y_train, sigmoid(X_train @ w + b))
+            test_loss = logloss(y_test, sigmoid(X_test @ w + b))
+            print(f"Epoch {epoch}: Train Loss {train_loss:.4f}, Test Loss {test_loss:.4f}")
 
     return w, b
+
 
 def categorize_y(y, thresholds):
     categories = np.zeros_like(y, dtype=int)
     categories[y > thresholds[1]] = 2
     categories[(y > thresholds[0]) & (y <= thresholds[1])] = 1
+
+    print(f"Class distribution: {np.bincount(categories)}")
     return categories
 
 def train_ovr(X, y, num_classes, epochs, alpha, eta0):
@@ -139,51 +147,39 @@ def predict_proba_ovr(X, models):
 def main():
     data = load_data()
     X, y = separate_data(data)
-    y = categorize_y(y, thresholds=[33, 66])  # Set appropriate thresholds
+    y = categorize_y(y, thresholds=[40, 61])  # Set appropriate thresholds
+    print(f"Class distribution in training data: {np.bincount(y)}")
+    # exit(0)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=15)
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    models = train_ovr(X_train_scaled, y_train, num_classes=3, epochs=50, alpha=0.001, eta0=0.001)
+    print(f"Class distribution in training data: {np.bincount(y_train)}")
+    models = train_ovr(X_train_scaled, y_train, num_classes=3, epochs=500, alpha=0.01, eta0=0.01)
 
     y_pred = predict_ovr(X_test_scaled, models)
 
     # Ensure y_test is a 1D numpy array
     y_test = y_test.flatten() if y_test.ndim > 1 else y_test
 
-    accuracy = np.mean(y_pred == y_test)
+    accuracy = np.mean(y_pred == y_train)
     print(f"Accuracy: {accuracy * 100:.2f}%")
+    print(f"Class distribution in test data: {np.bincount(y_pred)}")
+    print(f"Class distribution in test data: {np.bincount(y_test)}")
 
-    # confusion matrix
-    from sklearn.metrics import confusion_matrix
-    print(confusion_matrix(y_test, y_pred))
 
-    # classification report
-    from sklearn.metrics import classification_report
-    print(classification_report(y_test, y_pred))
-
-    # ROC curve
-    from sklearn.metrics import roc_curve
-    import matplotlib.pyplot as plt
-    fpr, tpr, thresholds = roc_curve(y_test, y_pred, pos_label=1)
-    plt.plot(fpr, tpr)
-
-    # # AUC score
-    # from sklearn.metrics import roc_auc_score
-    # y_score = predict_proba_ovr(X_test_scaled, models)
-    # print(roc_auc_score(y_test, y_score, multi_class='ovr'))
-
-    # F1 score
-    from sklearn.metrics import f1_score
-    print(f1_score(y_test, y_pred, average='macro',zero_division=1))
-
+    # Additional metrics
+    from sklearn.metrics import confusion_matrix, classification_report
+    print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+    print("\nClassification Report:\n", classification_report(y_test, y_pred, zero_division=1))
 
     return True
 
 if __name__ == "__main__":
     main()
+
 
 
 
