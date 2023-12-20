@@ -232,11 +232,11 @@ def main():
     
 
     # Cross-validate to find the best hyperparameters
-    best_params = model.cross_validate(X_train, y_train, X_val, y_val, learning_rates, num_iterations_list)
+    # best_params = model.cross_validate(X_train, y_train, X_val, y_val, learning_rates, num_iterations_list)
 
-    print("Best hyperparameters:", best_params)
+    # print("Best hyperparameters:", best_params)
 
-    model = SoftmaxRegression(learning_rate=best_params['learning_rate'], num_iterations=best_params['num_iterations'])
+    # model = SoftmaxRegression(learning_rate=best_params['learning_rate'], num_iterations=best_params['num_iterations'])
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
     accuracy = np.sum(y_pred == y_test)/y_test.size
@@ -253,7 +253,7 @@ def main():
     model.plot_violin(y_test, y_pred, model.classes, 'softmax_violin.png')
     model.plot_heatmap(y_test, y_pred, model.classes, 'softmax_heatmap.png')
     predicted_probabilities = model.predict_proba(X_test)
-    model.plot_roc_curves(y_test, predicted_probabilities, model.classes, 'roc_curves.png')
+    model.plot_roc_curves(y_test, predicted_probabilities, model.classes, 'softmax_roc_curves.png')
     model.accuracy_history = np.array(model.accuracy_history)
     model.f1_history = np.array(model.f1_history)
     model.plot_performance_over_iterations(model.accuracy_history, model.f1_history, 'performance_over_iterations.png')
