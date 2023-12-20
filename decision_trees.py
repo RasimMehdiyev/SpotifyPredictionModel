@@ -212,6 +212,20 @@ def visualize_sklearn_tree(decision_tree, feature_names, class_names, save_name=
     plt.savefig(f"{save_name}.png", format='png', dpi=300)  # Save as high-resolution PNG
     plt.close()  # Close the plot to free memory
 
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+def plot_confusion_matrix(y_true, y_pred, class_names,file_name):
+    cm = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(cm, annot=True, fmt="d", xticklabels=class_names, yticklabels=class_names)
+    plt.title("Confusion Matrix")
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    # plt.show()
+    plt.savefig(file_name)
+
 
 def main():
     # Load data
@@ -221,30 +235,42 @@ def main():
     # Drop irrelevant or non-informative features
     data = data.drop(columns=['track_id', 'track_name', 'track_album_id', 'track_artist', 
                             'playlist_name', 'playlist_genre', 'playlist_subgenre', 
-                            'track_album_name', 'track_album_release_date', 'playlist_id'])
+                            'track_album_name', 'track_album_release_date', 'playlist_id','key','mode','duration_ms'])
+
+    data['loudness'] = data['loudness'].apply(lambda x: (x+60)/60)
+    print(data['speechiness'])
 
     # Convert 'track_popularity' into three classes: Low, Medium, High
     popularity_bins = [0, 33, 66, 100]  # Adjust bins as needed
     popularity_labels = [0, 1, 2]
     data['track_popularity'] = pd.cut(data['track_popularity'], bins=popularity_bins, labels=popularity_labels, include_lowest=True, right=True)
 
-    # Encode categorical features if any
-    # Here, assuming 'key' and 'mode' are the only categorical features left
+    sampled_data = pd.DataFrame()
+    for label in popularity_labels:
+        class_samples = data[data['track_popularity'] == label]
+    # Check if the class has enough samples
+        if len(class_samples) >= 6000:
+            class_samples = class_samples.sample(n=6000, random_state=42)
+        sampled_data = pd.concat([sampled_data, class_samples])
+    sampled_data = sampled_data.reset_index(drop=True)
+    data = sampled_data
+    # print(data)
+
     label_encoder = LabelEncoder()
-    # data['key'] = label_encoder.fit_transform(data['key'])
-    # data['mode'] = label_encoder.fit_transform(data['mode'])
 
     # Separate features and target
     X = data.drop('track_popularity', axis=1)
+    # substitute all 0 values with 0.0001 to avoid division by zero
+    X = X.replace(0, 0.000001)
     y = label_encoder.fit_transform(data['track_popularity'])  # Convert labels to integers
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    # sm = SMOTE(random_state=42)
-    # X_train_sm, y_train_sm = sm.fit_resample(X_train, y_train)
+    # print(X)
+    # exit(0)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42,stratify=y)
+    print(f"Class distribution in training data: {np.bincount(y_train)}")
 
     # Build the decision tree with the balanced dataset
-    tree = build_tree(X_train, y_train, max_depth=10, min_size=150)
+    tree = build_tree(X_train, y_train, max_depth=10, min_size=50)
     # Make predictions
     y_pred = predict(X_test, tree)
     # Compute accuracy
@@ -253,7 +279,11 @@ def main():
     from sklearn.metrics import f1_score
     f1 = f1_score(y_test, y_pred, average='weighted')
     print("F1:", f1*100)
-    visualize_tree(tree, X.columns, np.unique(y), save_name="decision_tree.png")
+    visualize_tree(tree, X.columns, np.unique(y), save_name="dt_tree.png")
+    file_name = "confusion_dt.png"
+    class_names=np.unique(y)
+    plot_confusion_matrix(y_test, y_pred, class_names, file_name)
+
 
     # use library to compare
     from sklearn.tree import DecisionTreeClassifier
@@ -272,7 +302,10 @@ def main():
 
     # Visualize the tree
     class_names_str = [str(cls) for cls in np.unique(y)]
-    visualize_sklearn_tree(tree, X.columns.tolist(), class_names_str, save_name="decision_tree_lib.png")
+    visualize_sklearn_tree(tree, X.columns.tolist(), class_names_str, save_name="dt_tree_lib.png")
+    file_name = "confusion_dt_lib.png"
+    class_names=np.unique(y)
+    plot_confusion_matrix(y_test, y_pred, class_names,file_name)
 
     # visualize_sklearn_tree(tree, X.columns.tolist(), np.unique(y).tolist(), save_name="decision_tree_lib.png")
 
