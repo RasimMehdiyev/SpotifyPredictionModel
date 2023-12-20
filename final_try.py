@@ -49,42 +49,30 @@ def softmax(x):
     return e_x / e_x.sum(axis=1, keepdims=True)
 
 class SoftmaxRegression:
-    def __init__(self, learning_rate=0.05, num_iterations=1000):
+    def __init__(self, learning_rate=0.05, num_iterations=3000):
         self.learning_rate = learning_rate
         self.num_iterations = num_iterations
 
-    def cross_validate(self, X, y, learning_rates, num_iterations_list, k=5):
+    def cross_validate(self, X_train, y_train, X_val, y_val, learning_rates, num_iterations_list):
         best_f1 = 0
         best_params = {'learning_rate': None, 'num_iterations': None}
 
-        X = np.array(X)
-        y = np.array(y)
-
         for learning_rate in learning_rates:
             for num_iterations in num_iterations_list:
-                f1_scores = []
-                print(f'Learning rate: {learning_rate}, Num iterations: {num_iterations}')
+                print(f"Testing learning rate {learning_rate}, iteration {num_iterations}")
 
-                kf = KFold(n_splits=k, shuffle=True, random_state=42)
-                for train_index, val_index in kf.split(X):
-                    print("TRAIN:", train_index, "TEST:", val_index)
-                    X_train, X_val = X[train_index], X[val_index]
-                    y_train, y_val = y[train_index], y[val_index]
-                    
+                self.__init__(learning_rate, num_iterations)
+                self.fit(X_train, y_train)
 
-                    self.__init__(learning_rate, num_iterations)  # Re-initialize the model
-                    self.fit(X_train, y_train)
+                y_pred = self.predict(X_val)
+                f1 = f1_score(y_val, y_pred, average='weighted')
 
-                    y_pred = self.predict(X_val)
-                    f1 = f1_score(y_val, y_pred, average='weighted')
-                    f1_scores.append(f1)
-
-                avg_f1 = np.mean(f1_scores)
-                if avg_f1 > best_f1:
-                    best_f1 = avg_f1
+                if f1 > best_f1:
+                    best_f1 = f1
                     best_params['learning_rate'] = learning_rate
                     best_params['num_iterations'] = num_iterations
-                
+
+                print(f"  - F1 Score: {f1}, Best F1: {best_f1}")
 
         return best_params
 
@@ -129,6 +117,22 @@ class SoftmaxRegression:
         scores = np.dot(X, self.W) + self.b
         probabilities = softmax(scores)
         return probabilities
+
+    def split_data(self, X, y, train_size=0.6, test_size=0.2, random_state=42):
+    # First split: 60% training, 40% temporary (test + validation)
+        X_train, X_temp, y_train, y_temp = train_test_split(
+            X, y, train_size=train_size, random_state=random_state
+        )
+
+        # Adjust test_size for the second split: it's 50% of the remaining data
+        temp_test_size = test_size / (1 - train_size)
+
+        # Second split: split the temporary set into test and validation
+        X_test, X_val, y_test, y_val = train_test_split(
+            X_temp, y_temp, test_size=temp_test_size, random_state=random_state
+        )
+
+        return X_train, X_test, X_val, y_train, y_test, y_val
     
     def plot_performance_over_iterations(self, accuracy_history, f1_history, file_name):
         plt.figure(figsize=(10, 6))
@@ -217,14 +221,18 @@ def main():
     data = load_data()
     X, y = separate_data(data)
     X_scaled = standardize_data(X)
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42, stratify=y)
+
+    model = SoftmaxRegression()
+
+    X_train, X_test, X_val, y_train, y_test, y_val = model.split_data(X_scaled, y)
 
     learning_rates = [0.01, 0.05, 0.1]
     num_iterations_list = [1000, 2000, 3000]
 
-    # # Cross-validate to find the best hyperparameters
-    model = SoftmaxRegression()
-    best_params = model.cross_validate(X_train, y_train, learning_rates, num_iterations_list)
+    
+
+    # Cross-validate to find the best hyperparameters
+    best_params = model.cross_validate(X_train, y_train, X_val, y_val, learning_rates, num_iterations_list)
 
     print("Best hyperparameters:", best_params)
 
@@ -234,13 +242,11 @@ def main():
     accuracy = np.sum(y_pred == y_test)/y_test.size
 
 
-
     # Print results
 
     print("Accuracy:", accuracy*100)
     f1 = f1_score(y_test, y_pred, average='weighted')
     print("F1 Score:", f1*100)
-    print("Lengths of y_test and y_pred:", len(y_test), len(y_pred))
 
     # Plots 
     model.plot_confusion_matrix(y_test, y_pred, model.classes, 'softmax_confusion_matrix.png')
