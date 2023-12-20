@@ -171,7 +171,7 @@ def main():
 
 
     # Additional metrics
-    from sklearn.metrics import confusion_matrix, classification_report
+    from sklearn.metrics import confusion_matrix , classification_report
     print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
     print("\nClassification Report:\n", classification_report(y_test, y_pred, zero_division=1))
 
