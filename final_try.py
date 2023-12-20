@@ -21,7 +21,7 @@ def separate_data(data):
     popularity_labels = [0, 1, 2]
     data = data.drop(columns=['track_id', 'track_name', 'track_album_id', 'track_artist', 
                             'playlist_name', 'playlist_genre', 'playlist_subgenre', 
-                            'track_album_name', 'track_album_release_date', 'playlist_id'])
+                            'track_album_name', 'track_album_release_date', 'playlist_id','tempo', 'duration_ms', 'key', 'mode'])
     data['track_popularity'] = pd.cut(data['track_popularity'], bins=popularity_bins, labels=popularity_labels, include_lowest=True, right=True)
 
     sampled_data = pd.DataFrame()
