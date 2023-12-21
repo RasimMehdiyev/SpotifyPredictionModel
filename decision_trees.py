@@ -149,19 +149,24 @@ def compute_accuracy(y_pred, y_true):
     return np.mean(y_pred == y_true)
 
 def visualize_tree(tree, feature_names, class_names, save_name=None):
-    graph = pydot.Dot(graph_type="graph")
+    graph = pydot.Dot(graph_type="graph", dpi=300)  # Increase DPI for the graph
+
     def add_nodes_and_edges(node, parent=None):
         if isinstance(node, dict):  # Check if it's an internal node
-            label = feature_names[node["best_feature"]]
+            # turn feature names into abbreviated labels
+            label = feature_names[node["best_feature"]][:3]
+            # label = feature_names[node["best_feature"]]
             node_id = id(node)  # Unique identifier for the node
-            graph_node = pydot.Node(node_id, label=label)
+            # Customize node properties to make the plot more compact
+            graph_node = pydot.Node(node_id, label=label, shape='ellipse', fontsize='14', height='0.3', width='0.5')
 
             # Add node to the graph
             graph.add_node(graph_node)
 
             # Add edge from parent if it exists
             if parent is not None:
-                graph.add_edge(pydot.Edge(parent, node_id))
+                # Customize edge properties
+                graph.add_edge(pydot.Edge(parent, node_id, arrowsize='0.4'))
 
             # Recursive calls for children
             add_nodes_and_edges(node["left_branch"], node_id)
@@ -169,17 +174,30 @@ def visualize_tree(tree, feature_names, class_names, save_name=None):
 
         else:  # Leaf node
             label = class_names[node]
-            graph_node = pydot.Node(id(node), label=label)
+            # Customize leaf node properties
+            graph_node = pydot.Node(id(node), label=label, shape='box', fontsize='14', height='0.3', width='0.5')
             graph.add_node(graph_node)
             if parent is not None:
-                graph.add_edge(pydot.Edge(parent, id(node)))
+                graph.add_edge(pydot.Edge(parent, id(node), arrowsize='0.4'))
 
     # Start recursive process
     add_nodes_and_edges(tree)
 
     # Save or display the graph
     if save_name:
+        graph.write_png(save_name, prog='dot')  # Use 'dot' program for layout
+
+    return graph
+
+
+    # Start recursive process
+    add_nodes_and_edges(tree)
+
+    # Save or display the graph
+    if save_name:
+        # save with high resolution
         graph.write_png(save_name)
+        # graph.write_png(save_name)
     return graph
 
 
@@ -285,27 +303,27 @@ def main():
     plot_confusion_matrix(y_test, y_pred, class_names, file_name)
 
 
-    # use library to compare
-    from sklearn.tree import DecisionTreeClassifier
-    from sklearn.model_selection import cross_val_score
-    tree = DecisionTreeClassifier(max_depth=10, min_samples_leaf=50)
-    tree.fit(X_train, y_train)
-    y_pred = tree.predict(X_test)
-    accuracy = compute_accuracy(y_pred, y_test)
-    print("Accuracy:", accuracy * 100)
-    f1 = f1_score(y_test, y_pred, average='weighted')
-    print("F1:", f1*100)
+    # # use library to compare
+    # from sklearn.tree import DecisionTreeClassifier
+    # from sklearn.model_selection import cross_val_score
+    # tree = DecisionTreeClassifier(max_depth=10, min_samples_leaf=50)
+    # tree.fit(X_train, y_train)
+    # y_pred = tree.predict(X_test)
+    # accuracy = compute_accuracy(y_pred, y_test)
+    # print("Accuracy:", accuracy * 100)
+    # f1 = f1_score(y_test, y_pred, average='weighted')
+    # print("F1:", f1*100)
 
-    # cross validation
-    # scores = cross_val_score(tree, X, y, cv=5)
-    # print(scores)
+    # # cross validation
+    # # scores = cross_val_score(tree, X, y, cv=5)
+    # # print(scores)
 
-    # Visualize the tree
-    class_names_str = [str(cls) for cls in np.unique(y)]
-    visualize_sklearn_tree(tree, X.columns.tolist(), class_names_str, save_name="dt_tree_lib.png")
-    file_name = "confusion_dt_lib.png"
-    class_names=np.unique(y)
-    plot_confusion_matrix(y_test, y_pred, class_names,file_name)
+    # # Visualize the tree
+    # class_names_str = [str(cls) for cls in np.unique(y)]
+    # visualize_sklearn_tree(tree, X.columns.tolist(), class_names_str, save_name="dt_tree_lib.png")
+    # file_name = "confusion_dt_lib.png"
+    # class_names=np.unique(y)
+    # plot_confusion_matrix(y_test, y_pred, class_names,file_name)
 
     # visualize_sklearn_tree(tree, X.columns.tolist(), np.unique(y).tolist(), save_name="decision_tree_lib.png")
 
