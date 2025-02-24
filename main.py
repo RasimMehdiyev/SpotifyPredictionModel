@@ -59,30 +59,25 @@ def predict(X, w, b):
 def main():
     data = read_data()
     
-    # Preprocess categorical and numerical features
     categorical_features = ['track_id', 'track_name', 'track_artist', 'track_album_id', 'track_album_name', 'playlist_name', 'playlist_id', 'playlist_genre', 'playlist_subgenre', 'key', 'mode']  # list all categorical features
     numerical_features = ['danceability', 'energy', 'loudness', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'duration_ms']  # list all numerical features
 
 
     # print("Columns in DataFrame:", data.columns)
 
-    # Separating the target variable
     X = data.drop(columns=['track_popularity'])  # Features
     y = data['track_popularity']  # Target
 
-    # check if all columns in categorical_features exist in X
     for col in categorical_features:
         if col not in X.columns:
             print(f"Column '{col}' does not exist in the dataset.")
             exit(1)
 
-    # check if all columns in numerical_features exist in X
     for col in numerical_features:
         if col not in X.columns:
             print(f"Column '{col}' does not exist in the dataset.")
             exit(1)
 
-    # Debugging: Print columns of X and feature lists
     # print("Columns in X after dropping 'track_popularity':", X.columns)
     # print("Categorical features:", categorical_features)
     # print("Numerical features:", numerical_features)
@@ -92,7 +87,6 @@ def main():
             ('num', StandardScaler(), numerical_features),
             ('cat', OneHotEncoder(sparse=True), categorical_features)])  # Keep output sparse
 
-    # Apply preprocessing
     try:
         X = preprocessor.fit_transform(X)
     except ValueError as e:
@@ -100,17 +94,14 @@ def main():
         print('\n')
         return
     
-    # Convert to dense matrix if memory permits
     if isinstance(X, np.ndarray):
         print("X is already a dense matrix.\n")
     else:
         print("Converting X to a dense matrix.\n")
         X = X.toarray()
 
-    # Split data into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Initialize weights and bias
     w = np.zeros((X_train.shape[1], 1))
     b = 0
 
@@ -121,10 +112,6 @@ def main():
 
     # Predictions
     predictions = predict(X_test, w, b)
-
-    # Evaluate predictions...
-    # (Add code here to evaluate the model using metrics like accuracy, precision, recall, etc.)
-    # ...
     
 
 if __name__ == '__main__':
